@@ -1,78 +1,41 @@
-# Pre-shoplifting Detection with Faster R-CNN ResNet-50 V2 and RNN
+# Shoplifting detection from CCTV video
 
-This repository contains a TensorFlow implementation of Faster R-CNN with a ResNet-50 backbone, fine-tuned to detect shoplifting behaviors in video or image data.
+Classifies surveillance videos as shoplifting or normal, using per-frame features from a pre-trained ResNet-50 and an LSTM over time. This started as a thesis project ("pre-crime detection of shoplifting"); the notebook here is a re-run with the bugs in the original code fixed.
 
-## Key Features
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sanicodes/pre-crime-detection-shoplifiting/blob/main/shoplifting_detection.ipynb)
 
-- Utilizes a pretrained Faster R-CNN model with ResNet-50 backbone.
-- Fine-tuned specifically for detecting shoplifting behaviors.
-- Implements both object detection and temporal sequence analysis using RNN.
+| Path | |
+|---|---|
+| `shoplifting_detection.ipynb` | data download, feature extraction, training and evaluation |
+| `thesis_original/` | the 12 original thesis notebooks |
 
-## Prerequisites
+## Method
 
-- Python 3.6+
-- TensorFlow 2.x
-- TensorFlow Hub
-- PIL (for image and video processing)
-- NumPy
-- pandas
-- venv
+```
+CCTV video ──► frames (sampled by timestamp, RGB, 224×224)
+           ──► ResNet-50 V2, ImageNet weights, frozen ──► 2048 features per frame (computed once)
+           ──► sequence in time order, padded and masked
+           ──► Dense(128) ──► LSTM(128) ──► P(shoplifting)
+```
 
-## Dataset
+Evaluated with stratified 5-fold cross-validation, repeated over several seeds, and compared against:
 
-- **Source of the dataset**:
-  - UCF-Crime dataset (Shoplifting Videos)
-- **Data format**:
-  - Videos
+- logistic regression on video length, a single frame, and the mean of all frames;
+- the same LSTM with each video's frames shuffled;
+- the original thesis pipeline, re-created with its bugs;
+- a pre-theft test, on footage from before the annotated start of each theft.
 
-## Setup
+## Data
 
-1. **Clone the repo**
+[UCF-Crime](https://www.crcv.ucf.edu/research/real-world-anomaly-detection-in-surveillance-videos/): the 50 Shoplifting videos and the 50 videos in `Normal_Videos_for_Event_Recognition`, plus the temporal annotations for the pre-theft test. The notebook downloads them from a [Hugging Face mirror](https://huggingface.co/datasets/jinmang2/ucf_crime) and fetches only the needed files (about 3.7 GB of the 7.7 GB in the two zips). UCF-Crime is released for research use.
 
-   ```sh
-   git clone https://github.com/your_username/shoplifting-detection
-   cd shoplifting-detection
-   ```
+## Running
 
-2. **Install the requirements**
+**Colab:** open the notebook from the badge, choose a T4 GPU runtime and run all. Features and results are saved to `MyDrive/shoplifting-rerun`, so running again after a disconnect resumes where it stopped. `SMOKE_TEST = True` in the first code cell does a quick check run on 12 short videos.
 
-   Activate venv then
-
-   ```sh
-   pip install -r requirements.txt
-   ```
-
-3. **Update Directory Paths**
-
-   - The code contains directory-specific file paths. Update the paths in the code to match your local directory structure.
-   - Open the relevant scripts and modify the paths to point to the correct locations of your dataset and output directories.
-
-   For example,
-
-   ```python
-   DATA_DIR = "/path/to/your/data/"
-   FRAME_DIR = "/path/to/output/frame/directory"
-   ```
-
-   NOTE: DATA DIR Follows a 3 folder directory containing the videos
-
-   ```
-   shoplifting-detection/
-   ├── data/
-   │ ├── train/
-   │ ├── validation/
-   │ └── test/
-   ```
-
-4. **Run the code**
-   - Ensure your dataset is properly formatted and placed in the specified directories.
-   - Execute the notebook to start training or evaluating the model.
+**Locally:** `pip install -r requirements.txt` and run the notebook with Jupyter. Feature extraction for the full dataset takes hours without a GPU.
 
 ## References
 
-- The UCF-Crime dataset can be accessed from [here](http://webpages.charlotte.edu/cchen62/dataset.html).
-- For more information on Faster R-CNN, refer to the original paper [here](https://arxiv.org/abs/1506.01497).
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+- Sultani, Chen & Shah, [Real-world Anomaly Detection in Surveillance Videos](https://arxiv.org/abs/1801.04264), CVPR 2018
+- He, Zhang, Ren & Sun, [Identity Mappings in Deep Residual Networks](https://arxiv.org/abs/1603.05027), ECCV 2016
